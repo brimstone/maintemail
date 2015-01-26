@@ -3,6 +3,8 @@ from markdown import markdown
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 from xml.etree.ElementTree import *
+import urllib2
+import vobject
 
 # This is called when markdown() is called on some text
 
@@ -36,16 +38,15 @@ class MyTreeprocessor(Treeprocessor):
         return root
 
 
-description = '''Github Appliance
-=====
-The Github appliance will be upgraded to 2.1.0 and the hostname will be reconfigured from github.local. The github appliance will be intermittently available during this time.
+req = urllib2.Request(
+    'https://www.google.com/calendar/ical/uq2m73m8lvm2hf86nbfl9g8gkk%40group.calendar.google.com/private-12556f00fa50f0f4a10c2dcf65d7771f/basic.ics')
+response = urllib2.urlopen(req)
+icalstream = response.read()
 
-Second system
-====
-Description'''
+parsedCal = vobject.readOne(icalstream)
+print parsedCal.vevent.dtstart.value
+description = parsedCal.vevent.description.value
 
 systemlist = markdown(description, extensions=[HeaderFinder()])
 
 print systemlist
-print
-print markdown(description)
