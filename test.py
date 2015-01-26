@@ -28,11 +28,10 @@ class MyTreeprocessor(Treeprocessor):
             # delete the element because we're totally changing our root
             del root[c]
         # start our table
-        # This is probably should use etree.Element("ui") correctly
-        root.text = "<ul>"
+        new_root = SubElement(root, "ul")
         for h in reversed(headings):
-            root.text += "<li>" + h + "</li>"
-        root.text += "</ul>"
+            item = SubElement(new_root, "li")
+            item.text = h
         # return our modified root
         return root
 
@@ -47,4 +46,6 @@ Description'''
 
 systemlist = markdown(description, extensions=[HeaderFinder()])
 
-print markdown(systemlist + '\n\n' + description)
+print systemlist
+print
+print markdown(description)
