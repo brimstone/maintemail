@@ -1,9 +1,15 @@
 #!/usr/bin/python
+# for markdown processing
 from markdown import markdown
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
+# for ics feed
 import urllib2
 import vobject
+# for email
+from mailer import Mailer
+from mailer import Message
+
 
 # This is called when markdown() is called on some text
 
@@ -50,12 +56,37 @@ icalstream = response.read()
 
 # http://vobject.skyhouseconsulting.com/usage.html
 parsedCal = vobject.readOne(icalstream)
-print parsedCal.vevent.dtstart.value
 description = parsedCal.vevent.description.value
 
 headerfinder = HeaderFinder()
 systemdesc = markdown(description, extensions=[headerfinder])
 
-print systemdesc
+overview = "On "
+overview += parsedCal.vevent.dtstart.value.strftime("%A, %B %d %Y, from %I:%M%p")
+overview += " to "
+overview += parsedCal.vevent.dtend.value.strftime("%I:%M%p")
+overview += " will be performing maintenance on the following systems:\n\n"
 
-print headerfinder.getHeadings()
+for h in headerfinder.getHeadings():
+	overview += "* " + h + "\n"
+
+overview += "\n"
+
+template = open('maint.html', 'r').read()
+
+template = template.replace("%SYSTEMDESC%", systemdesc)
+template = template.replace("%SUMMARY%", parsedCal.vevent.summary.value)
+template = template.replace("%MONTH%", parsedCal.vevent.dtstart.value.strftime("%B"))
+template = template.replace("%DAY%", parsedCal.vevent.dtstart.value.strftime("%d"))
+template = template.replace("%STARTEND%", parsedCal.vevent.dtstart.value.strftime("%I:%M%p&nbsp;to&nbsp;") + parsedCal.vevent.dtend.value.strftime("%I:%M%p"))
+template = template.replace("%OVERVIEW%", markdown(overview))
+
+message = Message(From="maint@the.narro.ws",
+                  To="brimstone@the.narro.ws",
+                  Subject="IT Maintenance - " + parsedCal.vevent.summary.value)
+message.Body = overview + description
+message.Html = template
+
+sender = Mailer('mail.in.the.narro.ws')
+sender.send(message)
+
