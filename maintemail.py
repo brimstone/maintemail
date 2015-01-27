@@ -112,9 +112,9 @@ def main(argv):
 
     overview = "On "
     overview += parsedCal.vevent.dtstart.value.strftime(
-        "%A, %B %d %Y, from %I:%M%p")
+        "%A, %B %d %Y, from %l:%M%P")
     overview += " to "
-    overview += parsedCal.vevent.dtend.value.strftime("%I:%M%p")
+    overview += parsedCal.vevent.dtend.value.strftime("%l:%M%P")
     overview += " will be performing maintenance on the following systems:\n\n"
 
     for h in headerfinder.getHeadings():
@@ -131,12 +131,12 @@ def main(argv):
     template = template.replace(
         "%DAY%", parsedCal.vevent.dtstart.value.strftime("%d"))
     template = template.replace("%STARTEND%", parsedCal.vevent.dtstart.value.strftime(
-        "%I:%M%p&nbsp;to&nbsp;") + parsedCal.vevent.dtend.value.strftime("%I:%M%p"))
+        "%l:%M%P&nbsp;to&nbsp;").replace(":00", "") + parsedCal.vevent.dtend.value.strftime("%l:%M%P").replace(":00", ""))
     template = template.replace("%OVERVIEW%", markdown(overview))
 
     message = Message(From=fromaddress,
                       To=parsedCal.vevent.location.value,
-                      Subject="IT Maintenance - " + parsedCal.vevent.summary.value)
+                      Subject=parsedCal.x_wr_calname.value + " - " + parsedCal.vevent.summary.value)
     message.Body = overview + description
     message.Html = template
 
@@ -144,4 +144,4 @@ def main(argv):
     sender.send(message)
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main(sys.argv[1:])
