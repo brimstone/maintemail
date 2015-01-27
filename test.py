@@ -51,11 +51,13 @@ class MyTreeprocessor(Treeprocessor):
     def getHeadings(self):
         return self.headings
 
-def usage(message = ""):
+
+def usage(message=""):
     # TODO fill this out
     print message
     print "Usage: icsmailer.py ..."
     sys.exit(2)
+
 
 def main(argv):
 
