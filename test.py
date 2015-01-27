@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import getopt
 # for markdown processing
 from markdown import markdown
 from markdown.extensions import Extension
@@ -50,17 +51,59 @@ class MyTreeprocessor(Treeprocessor):
     def getHeadings(self):
         return self.headings
 
+def usage(message = ""):
+    # TODO fill this out
+    print message
+    print "Usage: icsmailer.py ..."
+    sys.exit(2)
 
 def main(argv):
 
-    req = urllib2.Request(
-        'https://www.google.com/calendar/ical/uq2m73m8lvm2hf86nbfl9g8gkk%40group.calendar.google.com/private-12556f00fa50f0f4a10c2dcf65d7771f/basic.ics')
+    verbose = False
+    ics = ""
+    smtp = ""
+    template = ""
+    try:
+        opts, args = getopt.getopt(argv, "hi:u:p:s:t:f:v",
+                                   ["help", "ics=", "username=", "password=", "smtp=", "template=", "from=", "verbose"])
+        print argv
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+        elif opt in ("-i", "--ics"):
+            ics = arg
+        elif opt in ("-u", "--username"):
+            username = arg
+        elif opt in ("-p", "--password"):
+            password = arg
+        elif opt in ("-s", "--smtp"):
+            smtp = arg
+        elif opt in ("-t", "--template"):
+            template = arg
+        elif opt in ("-f", "--from"):
+            fromaddress = arg
+        elif opt in ("-v", "--verbose"):
+            verbose = True
+    # Check to make sure we have everything we need
+    if ics == "":
+        usage("--ics is required")
+    if smtp == "":
+        usage("--smtp is required")
+    if template == "":
+        usage("--template is required")
+
+    req = urllib2.Request(ics)
     response = urllib2.urlopen(req)
     icalstream = response.read()
 
     # http://vobject.skyhouseconsulting.com/usage.html
     parsedCal = vobject.readOne(icalstream)
     description = parsedCal.vevent.description.value
+    if verbose:
+        print "Found: " + parsedCal.vevent.summary.value
 
     headerfinder = HeaderFinder()
     systemdesc = markdown(description, extensions=[headerfinder])
@@ -77,7 +120,7 @@ def main(argv):
 
     overview += "\n"
 
-    template = open('maint.html', 'r').read()
+    template = open(template, 'r').read()
 
     template = template.replace("%SYSTEMDESC%", systemdesc)
     template = template.replace("%SUMMARY%", parsedCal.vevent.summary.value)
@@ -89,13 +132,13 @@ def main(argv):
         "%I:%M%p&nbsp;to&nbsp;") + parsedCal.vevent.dtend.value.strftime("%I:%M%p"))
     template = template.replace("%OVERVIEW%", markdown(overview))
 
-    message = Message(From="maint@the.narro.ws",
-                      To="brimstone@the.narro.ws",
+    message = Message(From=fromaddress,
+                      To=parsedCal.vevent.location.value,
                       Subject="IT Maintenance - " + parsedCal.vevent.summary.value)
     message.Body = overview + description
     message.Html = template
 
-    sender = Mailer('mail.in.the.narro.ws')
+    sender = Mailer(smtp)
     sender.send(message)
 
 if __name__ == "__main__":
